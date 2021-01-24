@@ -22,6 +22,8 @@ function LevelMaker.generate(width, height)
     local tileset = math.random(20)
     local topperset = math.random(20)
 
+    local flagPostColor = math.random(#FLAG_POSTS)
+
     -- insert blank tables into tiles for later access
     for x = 1, height do
         table.insert(tiles, {})
@@ -150,8 +152,16 @@ function LevelMaker.generate(width, height)
                                     if keyCollected then
                                         gSounds['pickup']:play()
                                         obj.hit = true
+                                        obj.lockedBox = true
                                         -- obj.lockBox = true --set to true so our code in Player.lua can make it disappear
-                                        
+
+                                        --spawn flag
+                                        local flagObjects = getFlag(tiles, objects, width, height, flagPostColor)
+                                        for k, obj in pairs (flagObjects) do 
+                                            table.insert(objects, obj)
+                                        end
+                                    else
+                                        gSounds['empty-block']:play()
                                     end
                                 end
                             end
@@ -229,4 +239,101 @@ function LevelMaker.generate(width, height)
     map.tiles = tiles
     
     return GameLevel(entities, objects, map)
+end
+
+function getFlag(tiles, objects, width, height, flagPostColor)
+
+    local flag = {}
+    local yPos = 6
+    local xPos = -1
+
+    -- check valid flag position
+    for x = width - 1, 1, -1 do
+        if tiles[yPos][x].id == TILE_ID_EMPTY and tiles[yPos + 1][x].id == TILE_ID_GROUND then
+            xPos = x
+            break
+        end
+    end   
+    
+    for k, obj in pairs(objects) do
+        if obj.x == (xPos - 1) * TILE_SIZE then
+            table.remove(objects, k)
+        end
+    end
+
+    --create flagPost
+    for poleType = 2, 0, -1 do
+        
+        table.insert(flag, generateFlagPost(width, flagPostColor, xPos, yPos, poleType))
+
+        if poleType == 1 then
+            yPos = yPos -1
+            table.insert(flag, generateFlagPost(width, flagPostColor, xPos, yPos, poleType))
+
+            yPos = yPos -1
+            table.insert(flag, generateFlagPost(width, flagPostColor, xPos, yPos, poleType))
+        end
+
+        yPos = yPos - 1
+    end
+
+
+    -- add flag
+    table.insert(flag, generateFlag(width, xPos, yPos + 2))
+
+    return flag
+end
+
+function generateFlag(width, xPos, yPos)
+    local baseFrame = FLAGS[math.random(#FLAGS)]
+    return GameObject {
+        texture = 'flags',
+        x = (xPos - 1) * TILE_SIZE + 8,
+        y = (yPos - 1) * TILE_SIZE - 8,
+        width = 16,
+        height = 16,
+        animation = Animation {
+            frames = {baseFrame, baseFrame + 1},
+            interval = 0.2
+        }
+    }
+end
+
+function generateFlagPost(width, flagPostColor, xPos, yPos, poleType)
+    return GameObject{
+        texture = 'flags',
+        x = (xPos - 1) * TILE_SIZE,
+        y = (yPos - 1) * TILE_SIZE,
+        width = 6,
+        height = 16,
+        frame = flagPostColor + poleType * FLAG_OFFSET,
+        collidable = true,
+        consumable = true,
+        solid = false,
+
+        -- when the flag is collected, a new level starts
+        onConsume = function(player, object)
+            gSounds['pickup']:play()
+            player.score = player.score + 250 * getFlagSegmentMultiplier(poleType)
+
+            gStateMachine:change('play',{
+                lastLevelWidth = width,
+                score = player.score,
+                levelComplete = true,
+                keyCollected = false
+            })
+        end
+    }
+end
+
+function getFlagSegmentMultiplier(poleType)
+    if poleType == 0 then 
+        return 3
+    elseif poleType == 1 then
+        return 2
+    elseif poleType == 2 then
+        return 1
+    end
+
+    return 0
 end

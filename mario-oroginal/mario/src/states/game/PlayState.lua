@@ -8,15 +8,31 @@
 PlayState = Class{__includes = BaseState}
 
 function PlayState:init()
+    
+end
+
+function PlayState:enter(params)
+
+    self.score = params.score
+    self.levelWidth = params.lastLevelWidth
+
+    if self.levelWidth == 0 then
+        self.levelWidth = 100
+    else
+        self.levelWidth = self.levelWidth + 50
+    end
+
     self.camX = 0
     self.camY = 0
-    self.level = LevelMaker.generate(100, 10)
-    self.tileMap = self.level.tileMap
+
     self.background = math.random(3)
     self.backgroundX = 0
 
     self.gravityOn = true
     self.gravityAmount = 6
+
+    self.level = LevelMaker.generate(self.levelWidth, 10)
+    self.tileMap = self.level.tileMap
 
     self.player = Player({
         x = 0, y = 0,
@@ -29,9 +45,10 @@ function PlayState:init()
             ['falling'] = function() return PlayerFallingState(self.player, self.gravityAmount) end
         },
         map = self.tileMap,
-        level = self.level
-    })
-
+        level = self.level,
+        levelComplete = params.levelComplete or false
+    }, self.score)
+ 
     self:spawnEnemies()
 
     self.player:changeState('falling')
@@ -73,6 +90,10 @@ function PlayState:render()
 
     self.player:render()
     love.graphics.pop()
+
+    if self.player.levelComplete then
+        self.player:renderLevelComplete()
+    end
     
     -- render score
     love.graphics.setFont(gFonts['medium'])
