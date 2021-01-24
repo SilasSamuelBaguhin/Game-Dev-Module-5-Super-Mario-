@@ -27,6 +27,11 @@ function LevelMaker.generate(width, height)
         table.insert(tiles, {})
     end
 
+    --Generate ONE lock box and ONE key in a random position
+    local lockBoxPosition = math.random(1, width)
+    local keyPosition = math.random(1, width)
+    local keySkin = math.random(1,4) -- reference to color skin used
+
     -- column by column generation instead of row; sometimes better for platformers
     for x = 1, width do
         local tileID = TILE_ID_EMPTY
@@ -38,7 +43,7 @@ function LevelMaker.generate(width, height)
         end
 
         -- chance to just be emptiness
-        if math.random(7) == 1 then
+    if math.random(7) == 1 and x ~= 1 and lockBoxPosition ~= x and keyPosition ~= x then
             for y = 7, height do
                 table.insert(tiles[y],
                     Tile(x, y, tileID, nil, tileset, topperset))
@@ -79,7 +84,7 @@ function LevelMaker.generate(width, height)
                 tiles[7][x].topper = nil
             
             -- chance to generate bushes
-            elseif math.random(8) == 1 then
+            elseif math.random(8) == 1 and keyPosition ~= x then
                 table.insert(objects,
                     GameObject {
                         texture = 'bushes',
@@ -91,6 +96,67 @@ function LevelMaker.generate(width, height)
                         collidable = false
                     }
                 )
+            end
+
+            -- spawn key
+            if x == keyPosition then
+                table.insert(objects,
+                    GameObject {
+                        texture = 'keys-and-locks',
+                        x = (x - 1) * TILE_SIZE,
+                        y = (blockHeight + 1) * TILE_SIZE,
+                        width = 16,
+                        height = 16,
+                        frame = keySkin,
+                        collidable = true,
+                        consumable = true,
+                        solid = false,
+
+                        -- key has its own function to add to the player's score
+                        onConsume = function(player, object)
+                            gSounds['pickup']:play()
+                            player.score = player.score + 500
+                            keyCollected = true
+                        end    
+                    }                                                                   
+            )
+            end
+
+            --spawn lock box
+            if x == lockBoxPosition then
+
+                table.insert(objects,
+
+                    --lock box
+                    GameObject {
+                        texture = 'keys-and-locks',
+                        x = (x - 1) * TILE_SIZE,
+                        y = (blockHeight - 1) * TILE_SIZE,
+                        width = 16,
+                        height = 16,
+
+                        --make it random variant
+                        frame = keySkin + 4,
+                        collidable = true,
+                        hit = false,
+                        solid = true,
+                        lockedBox = false,
+
+                        --collision function takes itself
+                            onCollide = function(obj)
+
+                                if not obj.hit then --so that we only run this one time
+
+                                    if keyCollected then
+                                        gSounds['pickup']:play()
+                                        obj.hit = true
+                                        -- obj.lockBox = true --set to true so our code in Player.lua can make it disappear
+                                        
+                                    end
+                                end
+                            end
+                    }
+            )
             end
 
             -- chance to spawn a block
