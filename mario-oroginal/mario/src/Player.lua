@@ -10,9 +10,14 @@
 
 Player = Class{__includes = Entity}
 
-function Player:init(def)
+function Player:init(def, score)
     Entity.init(self, def)
-    self.score = 0
+    self.score = score
+    self.levelComplete = def.levelComplete
+
+    if self.levelComplete then
+        Timer.after(4, function () self.levelComplete = false end)
+    end
 end
 
 function Player:update(dt)
@@ -21,6 +26,14 @@ end
 
 function Player:render()
     Entity.render(self)
+end
+
+function Player:renderLevelComplete()
+    love.graphics.setFont(gFonts['medium'])
+    love.graphics.setColor(0, 0, 0, 255)
+    love.graphics.printf("Level Complete!", 0, 5, VIRTUAL_WIDTH, 'center')
+    love.graphics.setColor(255, 255, 255, 255)
+    love.graphics.printf("Level Complete!", 0, 4, VIRTUAL_WIDTH - 1, 'center')
 end
 
 function Player:checkLeftCollisions(dt)
@@ -74,6 +87,11 @@ function Player:checkObjectCollisions()
                 table.insert(collidedObjects, object)
             elseif object.consumable then
                 object.onConsume(self)
+                table.remove(self.level.objects, k)
+            end
+
+            --For removing a locked box if needed
+            if object.lockedBox and keyCollected then
                 table.remove(self.level.objects, k)
             end
         end

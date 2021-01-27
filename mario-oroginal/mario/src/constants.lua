@@ -86,6 +86,20 @@ GEMS = {
     1, 2, 3, 4, 5, 6, 7, 8
 }
 
+LOCKANDKEYS = {
+    1, 2, 3, 4, 5, 6, 7 ,8
+}
+
+FLAG_POSTS = {
+    1, 2, 3, 4, 5 ,6
+}
+
+FLAGS = {
+    7, 16, 25, 34
+}
+
+FLAG_OFFSET = 9
+
 JUMP_BLOCKS = {}
 
 for i = 1, 30 do
